@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dom Vilha Mexicano — Cardápio Digital</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E🌯%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23dd5b31'/%3E%3Ctext x='32' y='43' font-family='Georgia,serif' font-size='30' font-weight='700' text-anchor='middle' fill='%23fff'%3EDV%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,800;1,600;1,700&family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
@@ -23,8 +23,24 @@
   input,select,textarea{background:var(--surface);color:var(--text);border-color:var(--border)}
   input::placeholder,textarea::placeholder{color:var(--muted)}
   .err{border-color:var(--chili)!important}
-  .emo{font-size:22px;padding:4px 8px;border-radius:10px;border:2px solid var(--border);cursor:pointer;background:var(--surface)}
-  .emo.sel{border-color:var(--chili);background:color-mix(in srgb, var(--chili) 12%, var(--surface))}
+  /* ===== Carrossel de fotos ===== */
+  [hidden]{display:none!important}
+  .car{position:relative;border-radius:1rem;overflow:hidden;border:1px solid var(--border);background:var(--surface);margin-bottom:1.5rem}
+  .car-track{display:flex;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;scrollbar-width:none;-ms-overflow-style:none;aspect-ratio:4/3;outline-offset:-3px}
+  .car-track::-webkit-scrollbar{display:none}
+  .car-slide{flex:0 0 100%;min-width:0;scroll-snap-align:center;scroll-snap-stop:always}
+  .car-slide img{display:block;width:100%;height:100%;object-fit:cover;-webkit-user-drag:none;user-select:none}
+  @media (min-width:640px){.car-track{aspect-ratio:16/9}}
+  .car-btn{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:9999px;border:1px solid rgba(243,234,212,.28);background:rgba(21,17,13,.62);color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(4px);transition:background .2s ease}
+  .car-btn:hover{background:var(--chili)}
+  .car-prev{left:.75rem}.car-next{right:.75rem}
+  .car-bar{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;gap:.6rem;padding:1.1rem .75rem .7rem;background:linear-gradient(to top,rgba(21,17,13,.72),transparent);pointer-events:none}
+  .car-bar>*{pointer-events:auto}
+  .car-dot{position:relative;width:8px;height:8px;padding:0;border:0;border-radius:9999px;background:rgba(243,234,212,.5);cursor:pointer;transition:width .25s ease,background .25s ease}
+  .car-dot::after{content:"";position:absolute;inset:-9px -3px}
+  .car-dot[aria-current="true"]{width:22px;background:var(--marigold)}
+  .car-pause{width:28px;height:28px;margin-left:.35rem;border-radius:9999px;border:1px solid rgba(243,234,212,.35);background:rgba(21,17,13,.55);color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer}
+  @media (prefers-reduced-motion:reduce){.car-dot{transition:none}}
   .adtab{font-family:'Space Mono',monospace;font-size:11px}
   /* o site só aparece depois de carregar o cardápio salvo (evita piscar preços antigos) */
   #app{opacity:0;transition:opacity .25s ease}
@@ -43,9 +59,9 @@
   <div class="max-w-5xl mx-auto flex items-center justify-between px-4 py-3">
     <div id="brandName" class="fd font-extrabold text-xl leading-none"></div>
     <div class="flex items-center gap-2">
-      <button id="adminBtn" onclick="openAdmin()" class="hidden rounded-full px-3 py-2 text-sm font-semibold border border-[var(--border)]">🔧 Admin</button>
+      <button id="adminBtn" onclick="openAdmin()" class="hidden rounded-full px-3 py-2 text-sm font-semibold border border-[var(--border)]">Admin</button>
       <button onclick="openCart()" class="relative flex items-center gap-2 rounded-full px-4 py-2 font-semibold text-sm" style="background:var(--chili);color:#fff">
-        🛒 Carrinho
+        Carrinho
         <span id="cartBadge" class="hidden absolute -top-2 -right-2 text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center" style="background:var(--marigold);color:var(--bg)">0</span>
       </button>
     </div>
@@ -91,6 +107,7 @@
 <section class="max-w-5xl mx-auto px-4 py-10">
   <div id="featuresEyebrow" class="eyebrow mb-2"></div>
   <h2 id="featuresTitle" class="fd font-extrabold text-2xl sm:text-3xl mb-6"></h2>
+  <div id="carousel" class="car" role="region" aria-roledescription="carrossel" aria-label="Fotos do restaurante" hidden></div>
   <div id="featuresGrid" class="grid sm:grid-cols-3 gap-4"></div>
 </section>
 
@@ -162,7 +179,7 @@
 <div id="toastEl" class="fixed left-1/2 -translate-x-1/2 bottom-6 z-50 rounded-full px-5 py-2.5 text-sm font-semibold shadow-lg opacity-0 pointer-events-none transition-opacity duration-300"></div>
 
 </div>
-<script id="siteData" type="application/json">{"content":{"brandName":"Dom Vilha Mexicano","whatsappNumber":"5567984216434","announcement":"","heroEyebrow":"DELIVERY GASTRONÔMICO ARTESANAL","heroTitle":"O sabor do *México* na sua casa.","heroParagraph":"Burritos enrolados em tortilha tradicional artesanal, tostados na chapa, com ingredientes frescos selecionados, entregues quentinhos na sua porta, em Dourados e região.","heroBulletsLine1":"✦ Feito na chapa, na hora   ✦ Somente delivery","heroBulletsLine2":"✦ Quarta a domingo, 18h30 a 22h   ✦ Pix, débito e crédito","ctaWhatsappLabel":"Pedir pelo WhatsApp","ctaMenuLabel":"Ver o cardápio","marqueeText":"QUARTA A DOMINGO ✦ 18H30 ÀS 22H ✦ BURRITOS ARTESANAIS ✦ SALSAS & DIPS ✦ COMBOS","menuEyebrow":"O CARDÁPIO","menuTitle":"Nossos burritos, *uma comanda de verdade.*","featuresEyebrow":"EXPERIÊNCIA & LOGÍSTICA","featuresTitle":"Da chapa *até a sua mesa.*","features":[{"icon":"🛵","title":"Somente delivery","desc":"Atendemos Dourados-MS e região, de quarta a domingo, das 18h30 às 22h."},{"icon":"♨️","title":"Embalagens térmicas","desc":"Cada pedido é selado individualmente pra manter a temperatura e a textura ideais."},{"icon":"💳","title":"Pagamento fácil","desc":"Aceitamos Pix, cartão de débito e crédito."}],"ctaEyebrow":"BATEU A FOME?","ctaTitle":"Peça agora *pelo WhatsApp.*","ctaParagraph":"Chame, monte seu pedido e receba em casa. Quarta a domingo, das 18h30 às 22h.","ctaButtonLabel":"Chamar no WhatsApp","footerTagline":"Delivery gastronômico artesanal — \"O sabor do México na sua casa.\"","footerInfo":"🕐 Quarta a domingo, 18h30 às 22h · 🛵 Delivery em Dourados-MS e região · 💳 Pix, débito e crédito"},"categories":[{"id":"burritos","name":"Burritos","icon":"🌯","color":"var(--chili)"},{"id":"salsas","name":"Salsas & Dips","icon":"🥣","color":"var(--avocado)"},{"id":"combos","name":"Combos","icon":"🍽️","color":"var(--clay)"}],"products":[{"id":"b1","cat":"burritos","name":"Burrito de Costela","desc":"Costela bovina especial cozida lentamente e finalizada na chapa, com queijos cremosos e temperos tradicionais. Acompanha arroz mexicano, feijão mexicano, sour cream, vinagrete, picles, queijo, limão e molho do chefe.","price":42,"img":"🌯","photo":null,"available":true,"badge":"Sugestão do chefe","spec":"~370g · Suave","addons":[{"n":"Guacamole extra","p":4},{"n":"Queijo extra","p":3},{"n":"Dose extra de sour cream","p":3}]},{"id":"b2","cat":"burritos","name":"Burrito Mariachi","desc":"O autêntico chilli tex-mex picante, equilibrado pelo frescor do vinagrete e a suavidade do queijo. Acompanha arroz mexicano, creme de queijo, vinagrete, picles, queijo, limão e molho do chefe.","price":38,"img":"🌯","photo":null,"available":true,"badge":"Receita da casa","spec":"~370g · Apimentado","addons":[{"n":"Guacamole extra","p":4},{"n":"Queijo extra","p":3}]},{"id":"b3","cat":"burritos","name":"Burrito de Assado ao Chimichurri","desc":"Carne assada finalizada na chapa com o frescor do chimichurri artesanal e feijão mexicano.","price":40,"img":"🌯","photo":null,"available":true,"badge":"Corte nobre","spec":"~370g","addons":[{"n":"Guacamole extra","p":4},{"n":"Queijo extra","p":3}]},{"id":"s1","cat":"salsas","name":"Sour Cream Artesanal","desc":"Textura ultra cremosa com acidez fresca, pra harmonizar com os temperos da casa.","price":12,"img":"🥣","photo":null,"available":true,"badge":"","spec":"100g","addons":[]},{"id":"s2","cat":"salsas","name":"Guacamole Tradicional","desc":"Abacate amassado, cebola roxa, tomates maduros, coentro, azeite e toque cítrico de limão.","price":12,"img":"🥑","photo":null,"available":true,"badge":"","spec":"100g","addons":[]},{"id":"s3","cat":"salsas","name":"Molho Chilli Tex-Mex","desc":"Carne bovina e feijões lentamente apurados com especiarias e camada de queijo derretido.","price":11,"img":"🥣","photo":null,"available":true,"badge":"","spec":"100g","addons":[]},{"id":"s4","cat":"salsas","name":"Salsa Picante Signature","desc":"Criação autoral com pimentas selecionadas, picância equilibrada e profundidade aromática.","price":11,"img":"🌶️","photo":null,"available":true,"badge":"","spec":"100g","addons":[]},{"id":"s5","cat":"salsas","name":"Cheddar Aveludado","desc":"Fusão cremosa e marcante de queijo cheddar com textura sedosa.","price":11,"img":"🧀","photo":null,"available":true,"badge":"","spec":"100g","addons":[]},{"id":"c1","cat":"combos","name":"Combo de Costela","desc":"1x Burrito de Costela (~370g), acompanhado de nachos artesanais, guacamole, molho de pimenta rústico e uma Coca-Cola mini.","price":60,"img":"🍽️","photo":null,"available":true,"badge":"Degustação especial","spec":"Combo completo","addons":[]},{"id":"c2","cat":"combos","name":"Combo Degustação de Molhos","desc":"Escolha 3 molhos (100g cada) e monte sua própria degustação.","price":28,"img":"🍽️","photo":null,"available":true,"badge":"","spec":"","addons":[]}]}</script>
+<script id="siteData" type="application/json">{"content":{"brandName":"Dom Vilha Mexicano","whatsappNumber":"5567984216434","announcement":"","heroEyebrow":"DELIVERY GASTRONÔMICO ARTESANAL","heroTitle":"O sabor do *México* na sua casa.","heroParagraph":"Burritos enrolados em tortilha tradicional artesanal, tostados na chapa, com ingredientes frescos selecionados, entregues quentinhos na sua porta, em Dourados e região.","heroBulletsLine1":"✦ Feito na chapa, na hora   ✦ Somente delivery","heroBulletsLine2":"✦ Quarta a domingo, 18h30 a 22h   ✦ Pix, débito e crédito","ctaWhatsappLabel":"Pedir pelo WhatsApp","ctaMenuLabel":"Ver o cardápio","marqueeText":"QUARTA A DOMINGO ✦ 18H30 ÀS 22H ✦ BURRITOS ARTESANAIS ✦ SALSAS & DIPS ✦ COMBOS","menuEyebrow":"O CARDÁPIO","menuTitle":"Nossos burritos, *uma comanda de verdade.*","featuresEyebrow":"EXPERIÊNCIA & LOGÍSTICA","featuresTitle":"Da chapa *até a sua mesa.*","features":[{"title":"Somente delivery","desc":"Atendemos Dourados-MS e região, de quarta a domingo, das 18h30 às 22h."},{"title":"Embalagens térmicas","desc":"Cada pedido é selado individualmente pra manter a temperatura e a textura ideais."},{"title":"Pagamento fácil","desc":"Aceitamos Pix, cartão de débito e crédito."}],"ctaEyebrow":"BATEU A FOME?","ctaTitle":"Peça agora *pelo WhatsApp.*","ctaParagraph":"Chame, monte seu pedido e receba em casa. Quarta a domingo, das 18h30 às 22h.","ctaButtonLabel":"Chamar no WhatsApp","footerTagline":"Delivery gastronômico artesanal — \"O sabor do México na sua casa.\"","footerInfo":"Quarta a domingo, 18h30 às 22h · Delivery em Dourados-MS e região · Pix, débito e crédito","carousel":[]},"categories":[{"id":"burritos","name":"Burritos","color":"var(--chili)"},{"id":"salsas","name":"Salsas & Dips","color":"var(--avocado)"},{"id":"combos","name":"Combos","color":"var(--clay)"}],"products":[{"id":"b1","cat":"burritos","name":"Burrito de Costela","desc":"Costela bovina especial cozida lentamente e finalizada na chapa, com queijos cremosos e temperos tradicionais. Acompanha arroz mexicano, feijão mexicano, sour cream, vinagrete, picles, queijo, limão e molho do chefe.","price":42,"photo":null,"available":true,"badge":"Sugestão do chefe","spec":"~370g · Suave","addons":[{"n":"Guacamole extra","p":4},{"n":"Queijo extra","p":3},{"n":"Dose extra de sour cream","p":3}]},{"id":"b2","cat":"burritos","name":"Burrito Mariachi","desc":"O autêntico chilli tex-mex picante, equilibrado pelo frescor do vinagrete e a suavidade do queijo. Acompanha arroz mexicano, creme de queijo, vinagrete, picles, queijo, limão e molho do chefe.","price":38,"photo":null,"available":true,"badge":"Receita da casa","spec":"~370g · Apimentado","addons":[{"n":"Guacamole extra","p":4},{"n":"Queijo extra","p":3}]},{"id":"b3","cat":"burritos","name":"Burrito de Assado ao Chimichurri","desc":"Carne assada finalizada na chapa com o frescor do chimichurri artesanal e feijão mexicano.","price":40,"photo":null,"available":true,"badge":"Corte nobre","spec":"~370g","addons":[{"n":"Guacamole extra","p":4},{"n":"Queijo extra","p":3}]},{"id":"s1","cat":"salsas","name":"Sour Cream Artesanal","desc":"Textura ultra cremosa com acidez fresca, pra harmonizar com os temperos da casa.","price":12,"photo":null,"available":true,"badge":"","spec":"100g","addons":[]},{"id":"s2","cat":"salsas","name":"Guacamole Tradicional","desc":"Abacate amassado, cebola roxa, tomates maduros, coentro, azeite e toque cítrico de limão.","price":12,"photo":null,"available":true,"badge":"","spec":"100g","addons":[]},{"id":"s3","cat":"salsas","name":"Molho Chilli Tex-Mex","desc":"Carne bovina e feijões lentamente apurados com especiarias e camada de queijo derretido.","price":11,"photo":null,"available":true,"badge":"","spec":"100g","addons":[]},{"id":"s4","cat":"salsas","name":"Salsa Picante Signature","desc":"Criação autoral com pimentas selecionadas, picância equilibrada e profundidade aromática.","price":11,"photo":null,"available":true,"badge":"","spec":"100g","addons":[]},{"id":"s5","cat":"salsas","name":"Cheddar Aveludado","desc":"Fusão cremosa e marcante de queijo cheddar com textura sedosa.","price":11,"photo":null,"available":true,"badge":"","spec":"100g","addons":[]},{"id":"c1","cat":"combos","name":"Combo de Costela","desc":"1x Burrito de Costela (~370g), acompanhado de nachos artesanais, guacamole, molho de pimenta rústico e uma Coca-Cola mini.","price":60,"photo":null,"available":true,"badge":"Degustação especial","spec":"Combo completo","addons":[]},{"id":"c2","cat":"combos","name":"Combo Degustação de Molhos","desc":"Escolha 3 molhos (100g cada) e monte sua própria degustação.","price":28,"photo":null,"available":true,"badge":"","spec":"","addons":[]}]}</script>
 <script>
 
 /* ===== Helpers ===== */
@@ -170,17 +187,33 @@ const brl = v => "R$ " + Number(v||0).toFixed(2).replace(".", ",");
 function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function rich(s){ return esc(s).replace(/\*(.+?)\*/g,'<em class="italic" style="color:var(--marigold)">$1</em>'); }
 
-const EMOJI_OPTIONS = ["🌮","🌯","🥙","🥑","🥣","🍽️","🥤","🍺","🍹","🌶️","🧀","🍋","🥓","🍗"];
+/* Emojis não aparecem no site: são removidos de qualquer texto (dados antigos e o que for digitado no painel). */
+const EMOJI_RE = /\p{Emoji_Presentation}|\p{Extended_Pictographic}\uFE0F|[\uFE0F\u200D\u20E3]/gu;
+function noEmoji(s){
+  if(typeof s !== "string") return s;
+  const out = s.replace(EMOJI_RE, "");
+  return out === s ? s : out.replace(/[ \t]{2,}/g, " ").trim();
+}
+function deepNoEmoji(v){
+  if(typeof v === "string") return noEmoji(v);
+  if(Array.isArray(v)) return v.map(deepNoEmoji);
+  if(v && typeof v === "object"){ const o = {}; for(const k in v) o[k] = deepNoEmoji(v[k]); return o; }
+  return v;
+}
+const fv = id => noEmoji(document.getElementById(id).value);              // lê um campo do painel já sem emoji
+function monogram(p, size){ const ch = (p.name||"").trim().charAt(0).toUpperCase();
+  return `<span class="fd font-extrabold select-none" aria-hidden="true" style="font-size:${size||"3rem"};line-height:1;opacity:.35">${esc(ch)}</span>`; }
 const ADDONS_BURRITO = [{n:"Guacamole extra",p:4},{n:"Queijo extra",p:3},{n:"Dose extra de molho",p:3}];
 function getAddons(cat){ return cat==="burritos"?ADDONS_BURRITO:[]; }
 function productAddons(p){ return Array.isArray(p.addons) ? p.addons : getAddons(p.cat); }
 
 /* ===== Estado / dados persistidos ===== */
-let SITE = JSON.parse(document.getElementById("siteData").textContent);
+let SITE = deepNoEmoji(JSON.parse(document.getElementById("siteData").textContent));
 const DEFAULT_CONTENT = Object.assign({}, SITE.content);
 let MENU = SITE.products;
 let CATEGORIES = SITE.categories;
 if(!SITE.content.features) SITE.content.features = [];
+if(!Array.isArray(SITE.content.carousel)) SITE.content.carousel = [];
 
 let activeCat = CATEGORIES[0] ? CATEGORIES[0].id : "";
 let cart = [];
@@ -198,29 +231,30 @@ function renderContent(){
   document.getElementById("heroParagraph").textContent = c.heroParagraph;
   document.getElementById("heroBul1").textContent = c.heroBulletsLine1;
   document.getElementById("heroBul2").textContent = c.heroBulletsLine2;
-  document.getElementById("heroWhatsappLabel").textContent = "📲 " + c.ctaWhatsappLabel;
+  document.getElementById("heroWhatsappLabel").textContent = c.ctaWhatsappLabel;
   document.getElementById("heroMenuBtn").textContent = c.ctaMenuLabel;
   document.getElementById("ticketBrand").textContent = c.brandName.toUpperCase();
   document.getElementById("menuEyebrow").textContent = c.menuEyebrow;
   document.getElementById("menuTitle").innerHTML = rich(c.menuTitle);
   document.getElementById("featuresEyebrow").textContent = c.featuresEyebrow;
   document.getElementById("featuresTitle").innerHTML = rich(c.featuresTitle);
-  document.getElementById("featuresGrid").innerHTML = (c.features||[]).map(f=>`
-    <div class="rounded-xl border p-4" style="border-color:var(--border)"><div class="text-2xl mb-2">${esc(f.icon)}</div><div class="fd font-bold mb-1">${esc(f.title)}</div><div class="text-sm" style="color:var(--muted)">${esc(f.desc)}</div></div>`).join("");
+  document.getElementById("featuresGrid").innerHTML = (c.features||[]).map((f,i)=>`
+    <div class="rounded-xl border p-4" style="border-color:var(--border)"><div class="mono text-xs font-bold mb-2" style="color:var(--chili)">${String(i+1).padStart(2,"0")}</div><div class="fd font-bold mb-1">${esc(f.title)}</div><div class="text-sm" style="color:var(--muted)">${esc(f.desc)}</div></div>`).join("");
   document.getElementById("ctaEyebrow").textContent = c.ctaEyebrow;
   document.getElementById("ctaTitle").innerHTML = rich(c.ctaTitle);
   document.getElementById("ctaParagraph").textContent = c.ctaParagraph;
-  document.getElementById("ctaWhatsappLabel2").textContent = "📲 " + c.ctaButtonLabel;
+  document.getElementById("ctaWhatsappLabel2").textContent = c.ctaButtonLabel;
   document.getElementById("footerBrand").textContent = c.brandName;
   document.getElementById("footerTagline").textContent = c.footerTagline;
   document.getElementById("footerInfo").textContent = c.footerInfo;
   renderAnnouncement();
   renderTicket();
+  renderCarousel();
 }
 function renderAnnouncement(){
   const el = document.getElementById("announcementBar");
   const txt = (SITE.content.announcement||"").trim();
-  if(txt){ el.textContent = "📣 " + txt; el.classList.remove("hidden"); } else { el.classList.add("hidden"); el.textContent=""; }
+  if(txt){ el.textContent = txt; el.classList.remove("hidden"); } else { el.classList.add("hidden"); el.textContent=""; }
 }
 function renderTicket(){
   const el = document.getElementById("heroTicket"); if(!el) return;
@@ -230,7 +264,7 @@ function renderTicket(){
     if(item){ picks.push(item); seen.add(item.id); }
     if(picks.length>=4) break;
   }
-  el.innerHTML = picks.length ? picks.map((p,i)=>`<div class="flex justify-between ${i<picks.length-1?'border-b border-dashed pb-1':''}" style="border-color:#00000022">${p.img} ${esc(p.name)} <span>${brl(p.price)}</span></div>`).join("")
+  el.innerHTML = picks.length ? picks.map((p,i)=>`<div class="flex justify-between ${i<picks.length-1?'border-b border-dashed pb-1':''}" style="border-color:#00000022">${esc(p.name)} <span>${brl(p.price)}</span></div>`).join("")
     : '<div class="text-sm">Cardápio em breve...</div>';
 }
 function syncWhatsappLinks(){
@@ -243,7 +277,7 @@ function syncWhatsappLinks(){
 function toast(msg, isError){
   const el = document.getElementById("toastEl");
   if(!el) return;
-  el.textContent = (isError?"❌ ":"✅ ") + msg;
+  el.textContent = msg;
   el.style.background = isError ? "#c0392b" : "var(--avocado)";
   el.style.color = isError ? "#fff" : "var(--bg)";
   el.classList.remove("opacity-0","pointer-events-none");
@@ -253,15 +287,15 @@ function toast(msg, isError){
 
 /* ===== Navegação / grade de produtos (cliente) ===== */
 function navHTML(){
-  return CATEGORIES.map(c=>`<button class="catbtn ${c.id===activeCat?'active':''} whitespace-nowrap rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold" onclick="selectCat('${c.id}')">${c.icon} ${esc(c.name)}</button>`).join("");
+  return CATEGORIES.map(c=>`<button class="catbtn ${c.id===activeCat?'active':''} whitespace-nowrap rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold" onclick="selectCat('${c.id}')">${esc(c.name)}</button>`).join("");
 }
 function gridHTML(){
   const items = MENU.filter(p=>p.cat===activeCat);
   const cat = CATEGORIES.find(c=>c.id===activeCat);
   return items.map(p=>`
     <div class="rounded-2xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden flex flex-col ${p.available?'':'opacity-60'}">
-      <div class="h-32 flex items-center justify-center text-5xl relative overflow-hidden" style="background:linear-gradient(135deg, color-mix(in srgb, ${cat?cat.color:'var(--chili)'} 18%, var(--surface)), color-mix(in srgb, ${cat?cat.color:'var(--chili)'} 42%, var(--surface)))">
-        ${p.photo?`<img src="${esc(p.photo)}" class="w-full h-full object-cover">`:p.img}
+      <div class="h-32 flex items-center justify-center relative overflow-hidden" style="background:linear-gradient(135deg, color-mix(in srgb, ${cat?cat.color:'var(--chili)'} 18%, var(--surface)), color-mix(in srgb, ${cat?cat.color:'var(--chili)'} 42%, var(--surface)))">
+        ${p.photo?`<img src="${esc(p.photo)}" alt="${esc(p.name)}" loading="lazy" class="w-full h-full object-cover">`:monogram(p)}
         ${!p.available?'<span class="absolute top-2 right-2 text-[10px] font-bold px-2 py-1 rounded-full" style="background:var(--text);color:var(--surface)">ESGOTADO</span>':''}
       </div>
       <div class="p-4 flex flex-col flex-1">
@@ -299,7 +333,7 @@ function renderModal(){
         <span class="text-[var(--muted)]">${a.p>0?'+ '+brl(a.p):'grátis'}</span></label>`).join("")}
     </div>` : "";
   document.getElementById("modalContent").innerHTML = `
-    ${p.photo?`<img src="${esc(p.photo)}" class="w-full h-40 object-cover rounded-xl mb-3">`:`<div class="w-full h-28 rounded-xl mb-3 flex items-center justify-center text-5xl" style="background:linear-gradient(135deg, color-mix(in srgb, var(--marigold) 18%, var(--surface)), color-mix(in srgb, var(--marigold) 42%, var(--surface)))">${p.img}</div>`}
+    ${p.photo?`<img src="${esc(p.photo)}" class="w-full h-40 object-cover rounded-xl mb-3">`:`<div class="w-full h-28 rounded-xl mb-3 flex items-center justify-center" style="background:linear-gradient(135deg, color-mix(in srgb, var(--marigold) 18%, var(--surface)), color-mix(in srgb, var(--marigold) 42%, var(--surface)))">${monogram(p)}</div>`}
     ${p.badge?`<span class="eyebrow" style="color:var(--marigold)">${esc(p.badge)}</span>`:''}
     <div class="flex justify-between items-start">
       <h3 class="fd font-extrabold text-xl">${esc(p.name)}</h3>
@@ -354,7 +388,7 @@ function renderDrawer(){
 }
 function renderCartView(){
   const body=document.getElementById("drawerBody");
-  if(cart.length===0){ body.innerHTML=`<div class="text-center text-[var(--muted)] py-16">🛒<br>Seu carrinho está vazio.</div>`; return; }
+  if(cart.length===0){ body.innerHTML=`<div class="text-center text-[var(--muted)] py-16">Seu carrinho está vazio.</div>`; return; }
   body.innerHTML = `<div class="space-y-3">
     ${cart.map(it=>`<div class="border border-[var(--border)] rounded-xl p-3">
       <div class="flex justify-between font-semibold text-sm"><span>${esc(it.name)}</span><span>${brl(it.unit*it.qty)}</span></div>
@@ -396,7 +430,7 @@ function renderCheckoutView(){
     </div>
     <div class="mt-5 pt-4 border-t border-[var(--border)] flex justify-between font-bold text-lg"><span>Total</span><span>${brl(cartTotal())}</span></div>
     <button onclick="backToCart()" class="w-full mt-3 rounded-full py-2.5 font-semibold border border-[var(--border)]">← Voltar ao carrinho</button>
-    <button onclick="sendWhatsApp()" class="w-full mt-2 rounded-full py-3.5 font-bold text-white flex items-center justify-center gap-2 text-base" style="background:#25D366">📲 Enviar pedido pelo WhatsApp</button>`;
+    <button onclick="sendWhatsApp()" class="w-full mt-2 rounded-full py-3.5 font-bold text-white flex items-center justify-center gap-2 text-base" style="background:#25D366">Enviar pedido pelo WhatsApp</button>`;
 }
 function sendWhatsApp(){
   let missing=[];
@@ -405,7 +439,7 @@ function sendWhatsApp(){
   if(order.tipo==="entrega" && !order.endereco.trim()) missing.push("fEnd");
   document.querySelectorAll("#drawerBody input").forEach(el=>el.classList.remove("err"));
   if(missing.length){ missing.forEach(id=>{const el=document.getElementById(id); if(el) el.classList.add("err");}); document.getElementById(missing[0]).scrollIntoView({behavior:"smooth",block:"center"}); return; }
-  let msg="🌮 NOVO PEDIDO\n";
+  let msg="NOVO PEDIDO\n";
   msg+=`Cliente: ${order.nome}\nTelefone: ${order.telefone}\nItens:\n`;
   cart.forEach(it=>{
     msg+=`${it.qty}x ${it.name} — ${brl(it.unit*it.qty)}\n`;
@@ -501,8 +535,10 @@ async function doSave(msg){
 
 /* ===== Carregamento do cardápio salvo ===== */
 function applySite(data){
+  data = deepNoEmoji(data);
   SITE = {content: Object.assign({}, DEFAULT_CONTENT, data.content), categories: data.categories, products: data.products};
   if(!SITE.content.features) SITE.content.features = [];
+  SITE.content.carousel = Array.isArray(data.content.carousel) ? data.content.carousel.slice() : [];
   MENU = SITE.products; CATEGORIES = SITE.categories;
   activeCat = CATEGORIES[0] ? CATEGORIES[0].id : "";
 }
@@ -524,7 +560,7 @@ function openAdmin(){ adminTab="cardapio"; renderAdminTabs(); renderAdminBody();
 function closeAdmin(){ document.getElementById("adminDrawer").classList.add("translate-x-full"); setTimeout(()=>document.getElementById("adminBg").classList.add("hidden"),300); }
 function setAdminTab(t){ adminTab=t; renderAdminTabs(); renderAdminBody(); }
 function renderAdminTabs(){
-  const tabs=[["cardapio","📋 Cardápio"],["produtos","➕ Produtos"],["categorias","🏷️ Categorias"],["conteudo","✏️ Conteúdo"],["config","⚙️ Config"]];
+  const tabs=[["cardapio","Cardápio"],["produtos","Produtos"],["categorias","Categorias"],["conteudo","Conteúdo"],["carrossel","Carrossel"],["config","Config"]];
   document.getElementById("adminTabs").innerHTML = tabs.map(([id,label])=>`<button onclick="setAdminTab('${id}')" class="adtab px-3 py-1.5 rounded-full border whitespace-nowrap" style="${adminTab===id?'background:var(--chili);border-color:var(--chili);color:#fff':'border-color:var(--border)'}">${label}</button>`).join("");
 }
 function renderAdminBody(){
@@ -533,16 +569,17 @@ function renderAdminBody(){
   else if(adminTab==="produtos"){ body.innerHTML = tabProdutosHTML(); renderPhotoPreview(); renderAddonsList(); }
   else if(adminTab==="categorias") body.innerHTML = tabCategoriasHTML();
   else if(adminTab==="conteudo"){ body.innerHTML = tabConteudoHTML(); renderFeatEditList(); }
+  else if(adminTab==="carrossel"){ body.innerHTML = tabCarrosselHTML(); renderCarAdminList(); }
   else if(adminTab==="config") body.innerHTML = tabConfigHTML();
 }
 
 /* --- Aba Cardápio: organizar, ativar/desativar, reordenar --- */
 function tabCardapioHTML(){
   let html = `<button onclick="newProduct()" class="w-full mb-4 rounded-full py-2.5 font-semibold text-white" style="background:var(--chili)">+ Novo produto</button>`;
-  if(!CATEGORIES.length){ html += `<div class="text-sm" style="color:var(--muted)">Crie uma categoria na aba 🏷️ Categorias antes de adicionar produtos.</div>`; return html; }
+  if(!CATEGORIES.length){ html += `<div class="text-sm" style="color:var(--muted)">Crie uma categoria na aba Categorias antes de adicionar produtos.</div>`; return html; }
   CATEGORIES.forEach(c=>{
     const items = MENU.filter(p=>p.cat===c.id);
-    html += `<div class="fd font-bold text-sm mt-4 mb-2">${c.icon} ${esc(c.name)}</div>`;
+    html += `<div class="fd font-bold text-sm mt-4 mb-2">${esc(c.name)}</div>`;
     if(!items.length) html += `<div class="text-xs mb-2" style="color:var(--muted)">Nenhum produto nesta categoria.</div>`;
     items.forEach((p,i)=>{
       html += `<div class="flex items-center gap-2 border rounded-xl px-3 py-2 mb-2" style="border-color:var(--border)">
@@ -550,14 +587,14 @@ function tabCardapioHTML(){
           <button onclick="moveProduct('${p.id}',-1)" ${i===0?'disabled':''} class="disabled:opacity-20 py-0.5">▲</button>
           <button onclick="moveProduct('${p.id}',1)" ${i===items.length-1?'disabled':''} class="disabled:opacity-20 py-0.5">▼</button>
         </div>
-        ${p.photo?`<img src="${esc(p.photo)}" class="w-9 h-9 object-cover rounded-lg shrink-0">`:`<span class="text-xl shrink-0">${p.img}</span>`}
+        ${p.photo?`<img src="${esc(p.photo)}" class="w-9 h-9 object-cover rounded-lg shrink-0">`:`<span class="w-9 h-9 rounded-lg shrink-0 flex items-center justify-center" style="background:var(--border)">${monogram(p,"1.1rem")}</span>`}
         <div class="flex-1 min-w-0">
           <div class="font-semibold text-sm truncate">${esc(p.name)}</div>
           <div class="text-xs" style="color:var(--muted)">${brl(p.price)}</div>
         </div>
         <label class="flex items-center gap-1 text-[10px] shrink-0"><input type="checkbox" ${p.available?'checked':''} onchange="toggleAvailable('${p.id}')">ativo</label>
-        <button onclick="editProduct('${p.id}')" class="px-1 py-1 text-sm shrink-0">✏️</button>
-        <button onclick="deleteProduct('${p.id}')" class="px-1 py-1 text-sm shrink-0">🗑️</button>
+        <button onclick="editProduct('${p.id}')" class="px-2 py-1 text-xs font-semibold shrink-0 underline">Editar</button>
+        <button onclick="deleteProduct('${p.id}')" class="px-2 py-1 text-xs font-semibold shrink-0 underline" style="color:var(--chili)">Excluir</button>
       </div>`;
     });
   });
@@ -582,12 +619,12 @@ function editProduct(id){ adminEditingId=id; setAdminTab("produtos"); }
 function newProduct(){ adminEditingId=null; setAdminTab("produtos"); }
 
 /* --- Aba Produtos: criar/editar --- */
-let adminEditingId=null, adminEmoji="🌮", adminPhoto=null, photoBusy=false, adminAddons=[];
+let adminEditingId=null, adminPhoto=null, photoBusy=false, adminAddons=[];
 function tabProdutosHTML(){
   if(!CATEGORIES.length) return `<div class="text-sm" style="color:var(--muted)">Crie uma categoria antes de adicionar produtos.</div>`;
   const id = adminEditingId;
-  const p = id ? MENU.find(x=>x.id===id) : {name:"",desc:"",price:"",cat:activeCat||CATEGORIES[0].id,img:"🌮",photo:null,badge:"",spec:"",available:true};
-  adminEmoji = p.img||"🌮"; adminPhoto = p.photo||null; photoBusy=false;
+  const p = id ? MENU.find(x=>x.id===id) : {name:"",desc:"",price:"",cat:activeCat||CATEGORIES[0].id,photo:null,badge:"",spec:"",available:true};
+  adminPhoto = p.photo||null; photoBusy=false;
   adminAddons = productAddons(p).map(a=>({n:a.n,p:a.p}));
   return `
     <h3 class="fd font-bold text-lg mb-3">${id?"Editar produto":"Novo produto"}</h3>
@@ -606,11 +643,9 @@ function tabProdutosHTML(){
         <label class="font-semibold block mb-1">Foto do produto</label>
         <div id="admPhotoPreview" class="flex items-center gap-3 mb-2"></div>
         <label class="inline-block rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-semibold cursor-pointer">
-          📷 Enviar foto do dispositivo
+          Enviar foto do dispositivo
           <input type="file" accept="image/*" class="hidden" onchange="handlePhotoFile(this)">
         </label>
-        <div class="text-xs text-[var(--muted)] mt-2 mb-1">ou use um emoji como foto:</div>
-        <div class="flex flex-wrap gap-2">${EMOJI_OPTIONS.map(e=>`<button type="button" onclick="pickEmoji('${e}')" class="emo ${e===adminEmoji?'sel':''}" data-emo="${e}">${e}</button>`).join("")}</div>
       </div>
       <div>
         <label class="font-semibold block mb-1">Adicionais opcionais</label>
@@ -625,38 +660,42 @@ function tabProdutosHTML(){
       <label class="flex items-center gap-2"><input id="admAvail" type="checkbox" ${p.available?'checked':''}> Disponível no cardápio</label>
     </div>
     <div class="flex gap-2 mt-5">
-      <button onclick="saveProduct()" class="flex-1 rounded-full py-2.5 font-semibold" style="background:var(--avocado);color:var(--bg)">💾 Salvar produto</button>
+      <button onclick="saveProduct()" class="flex-1 rounded-full py-2.5 font-semibold" style="background:var(--avocado);color:var(--bg)">Salvar produto</button>
       <button onclick="newProduct()" class="flex-1 rounded-full py-2.5 font-semibold border border-[var(--border)]">${id?'Cancelar':'Limpar'}</button>
     </div>`;
 }
-function pickEmoji(e){ adminEmoji=e; document.querySelectorAll(".emo[data-emo]").forEach(b=>b.classList.toggle("sel", b.dataset.emo===e)); }
 function renderPhotoPreview(){
   const el = document.getElementById("admPhotoPreview"); if(!el) return;
   if(photoBusy){ el.innerHTML = `<span class="text-xs text-[var(--muted)]">Processando imagem...</span>`; return; }
   el.innerHTML = adminPhoto
     ? `<img src="${esc(adminPhoto)}" class="w-20 h-20 object-cover rounded-xl border border-[var(--border)]"><button type="button" onclick="removePhoto()" class="text-xs font-semibold" style="color:var(--chili)">Remover foto</button>`
-    : `<span class="text-xs text-[var(--muted)]">Nenhuma foto enviada ainda — o emoji será usado.</span>`;
+    : `<span class="text-xs text-[var(--muted)]">Nenhuma foto enviada ainda — o cartão mostra um fundo neutro.</span>`;
 }
 function removePhoto(){ adminPhoto=null; renderPhotoPreview(); }
+/* Reduz a imagem no navegador e envia para o servidor. Devolve a URL pública. */
+async function uploadImageFile(file, maxSide, quality){
+  if(!file.type.startsWith("image/")) throw new Error("Selecione um arquivo de imagem.");
+  if(!adminToken){ openLogin(); throw new Error("Entre como administrador para enviar fotos."); }
+  const dataUrl = await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=()=>rej(new Error("Falha")); r.readAsDataURL(file); });
+  const img = await new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=()=>rej(new Error("Falha")); im.src=dataUrl; });
+  const scale = Math.min(1, maxSide/Math.max(img.width, img.height));
+  const w=Math.round(img.width*scale), h=Math.round(img.height*scale);
+  const canvas=document.createElement("canvas"); canvas.width=w; canvas.height=h;
+  canvas.getContext("2d").drawImage(img,0,0,w,h);
+  const r = await fetch("/api/upload", {method:"POST", headers:authHeaders(), body:JSON.stringify({image: canvas.toDataURL("image/jpeg", quality)})});
+  const j = await r.json().catch(()=>({}));
+  if(r.status === 401){ clearToken(); openLogin(); throw new Error("Sessão expirada. Entre novamente e envie a foto de novo."); }
+  if(!r.ok) throw new Error(j.error || "Falha no envio.");
+  return j.url;
+}
+const uploadErrorText = e => (e && e.message && e.message !== "Falha") ? e.message : "Não foi possível enviar a foto. Tente outra imagem.";
+
 async function handlePhotoFile(input){
   const file = input.files && input.files[0];
   if(!file) return;
-  if(!file.type.startsWith("image/")){ alert("Selecione um arquivo de imagem."); input.value=""; return; }
-  if(!adminToken){ openLogin(); input.value=""; return; }
   photoBusy = true; renderPhotoPreview();
-  try{
-    const dataUrl = await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=()=>rej(new Error("Falha")); r.readAsDataURL(file); });
-    const img = await new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=()=>rej(new Error("Falha")); im.src=dataUrl; });
-    const maxSide = 800, scale = Math.min(1, maxSide/Math.max(img.width, img.height));
-    const w=Math.round(img.width*scale), h=Math.round(img.height*scale);
-    const canvas=document.createElement("canvas"); canvas.width=w; canvas.height=h;
-    canvas.getContext("2d").drawImage(img,0,0,w,h);
-    const r = await fetch("/api/upload", {method:"POST", headers:authHeaders(), body:JSON.stringify({image: canvas.toDataURL("image/jpeg", 0.8)})});
-    const j = await r.json().catch(()=>({}));
-    if(r.status === 401){ clearToken(); openLogin(); throw new Error("Sessão expirada. Entre novamente e envie a foto de novo."); }
-    if(!r.ok) throw new Error(j.error || "Falha no envio.");
-    adminPhoto = j.url;
-  }catch(e){ alert(e && e.message && e.message !== "Falha" ? e.message : "Não foi possível enviar a foto. Tente outra imagem."); }
+  try{ adminPhoto = await uploadImageFile(file, 800, 0.8); }
+  catch(e){ alert(uploadErrorText(e)); }
   input.value = "";
   photoBusy=false; renderPhotoPreview();
 }
@@ -670,7 +709,7 @@ function renderAddonsList(){
 }
 function addAdminAddon(){
   const nameEl=document.getElementById("admAddonName"), priceEl=document.getElementById("admAddonPrice");
-  const n=nameEl.value.trim(); const pr=parseFloat(priceEl.value);
+  const n=noEmoji(nameEl.value.trim()); const pr=parseFloat(priceEl.value);
   if(!n){ alert("Digite o nome do adicional."); return; }
   adminAddons.push({n, p:isNaN(pr)?0:pr});
   nameEl.value=""; priceEl.value=""; renderAddonsList();
@@ -678,16 +717,16 @@ function addAdminAddon(){
 function removeAdminAddon(i){ adminAddons.splice(i,1); renderAddonsList(); }
 function saveProduct(){
   if(photoBusy){ alert("Aguarde o processamento da foto."); return; }
-  const name=document.getElementById("admName").value.trim();
+  const name=fv("admName").trim();
   const price=parseFloat(document.getElementById("admPrice").value);
   if(!name){ alert("Digite o nome do produto."); return; }
   if(isNaN(price) || price<0){ alert("Informe um preço válido."); return; }
   const cat=document.getElementById("admCat").value;
   if(!cat){ alert("Selecione uma categoria."); return; }
   const data = {
-    name, desc:document.getElementById("admDesc").value.trim(), price, cat,
-    badge:document.getElementById("admBadge").value.trim(), spec:document.getElementById("admSpec").value.trim(),
-    img:adminEmoji, photo:adminPhoto, available:document.getElementById("admAvail").checked, addons:adminAddons.slice()
+    name, desc:fv("admDesc").trim(), price, cat,
+    badge:fv("admBadge").trim(), spec:fv("admSpec").trim(),
+    photo:adminPhoto, available:document.getElementById("admAvail").checked, addons:adminAddons.slice()
   };
   if(adminEditingId){ Object.assign(MENU.find(x=>x.id===adminEditingId), data); }
   else { const np=Object.assign({id:"p_"+Date.now()}, data); MENU.push(np); adminEditingId=np.id; }
@@ -697,7 +736,7 @@ function saveProduct(){
 }
 
 /* --- Aba Categorias --- */
-let catEditingId=null, catEmoji="🌮", catColor="var(--chili)";
+let catEditingId=null, catColor="var(--chili)";
 const CAT_COLORS = ["var(--chili)","var(--avocado)","var(--marigold)","var(--clay)","var(--agave)"];
 function tabCategoriasHTML(){
   let html = CATEGORIES.map((c,i)=>{
@@ -707,35 +746,32 @@ function tabCategoriasHTML(){
         <button onclick="moveCategory('${c.id}',-1)" ${i===0?'disabled':''} class="disabled:opacity-20 py-0.5">▲</button>
         <button onclick="moveCategory('${c.id}',1)" ${i===CATEGORIES.length-1?'disabled':''} class="disabled:opacity-20 py-0.5">▼</button>
       </div>
-      <span class="text-xl shrink-0">${c.icon}</span>
       <div class="flex-1 text-sm font-semibold min-w-0 truncate">${esc(c.name)} <span class="text-xs font-normal" style="color:var(--muted)">(${count})</span></div>
-      <button onclick="editCategory('${c.id}')" class="px-1 py-1 text-sm shrink-0">✏️</button>
-      <button onclick="deleteCategory('${c.id}')" class="px-1 py-1 text-sm shrink-0">🗑️</button>
+      <button onclick="editCategory('${c.id}')" class="px-2 py-1 text-xs font-semibold shrink-0 underline">Editar</button>
+      <button onclick="deleteCategory('${c.id}')" class="px-2 py-1 text-xs font-semibold shrink-0 underline" style="color:var(--chili)">Excluir</button>
     </div>`;
   }).join("") || `<div class="text-sm mb-3" style="color:var(--muted)">Nenhuma categoria ainda.</div>`;
   const c = catEditingId ? CATEGORIES.find(x=>x.id===catEditingId) : null;
-  catEmoji = c?c.icon:"🌮"; catColor = c?c.color:"var(--chili)";
+  catColor = c?c.color:"var(--chili)";
   html += `<h3 class="fd font-bold text-base mt-5 mb-2">${catEditingId?"Editar categoria":"Nova categoria"}</h3>
     <div class="space-y-3 text-sm">
       <div><label class="font-semibold block mb-1">Nome</label><input id="catName" value="${c?esc(c.name):''}" class="w-full rounded-lg border px-3 py-2"></div>
-      <div><label class="font-semibold block mb-1">Ícone</label><div class="flex flex-wrap gap-2">${EMOJI_OPTIONS.map(e=>`<button type="button" onclick="pickCatEmoji('${e}')" class="emo ${e===catEmoji?'sel':''}" data-catemo="${e}">${e}</button>`).join("")}</div></div>
       <div><label class="font-semibold block mb-1">Cor de destaque</label><div class="flex gap-2">${CAT_COLORS.map(cc=>`<button type="button" onclick="pickCatColor('${cc}')" class="w-8 h-8 rounded-full border-2" style="background:${cc};border-color:${cc===catColor?'var(--text)':'transparent'}"></button>`).join("")}</div></div>
     </div>
     <div class="flex gap-2 mt-4">
-      <button onclick="saveCategory()" class="flex-1 rounded-full py-2.5 font-semibold" style="background:var(--avocado);color:var(--bg)">💾 Salvar categoria</button>
+      <button onclick="saveCategory()" class="flex-1 rounded-full py-2.5 font-semibold" style="background:var(--avocado);color:var(--bg)">Salvar categoria</button>
       ${catEditingId?`<button onclick="newCategory()" class="flex-1 rounded-full py-2.5 font-semibold border border-[var(--border)]">Cancelar</button>`:''}
     </div>`;
   return html;
 }
-function pickCatEmoji(e){ catEmoji=e; document.querySelectorAll(".emo[data-catemo]").forEach(b=>b.classList.toggle("sel", b.dataset.catemo===e)); }
 function pickCatColor(c){ catColor=c; renderAdminBody(); }
 function editCategory(id){ catEditingId=id; renderAdminBody(); }
 function newCategory(){ catEditingId=null; renderAdminBody(); }
 function saveCategory(){
-  const name=document.getElementById("catName").value.trim();
+  const name=fv("catName").trim();
   if(!name){ alert("Digite o nome da categoria."); return; }
-  if(catEditingId){ const c=CATEGORIES.find(x=>x.id===catEditingId); c.name=name; c.icon=catEmoji; c.color=catColor; }
-  else { const nc={id:"cat_"+Date.now(), name, icon:catEmoji, color:catColor}; CATEGORIES.push(nc); if(!activeCat) activeCat=nc.id; }
+  if(catEditingId){ const c=CATEGORIES.find(x=>x.id===catEditingId); c.name=name; c.color=catColor; }
+  else { const nc={id:"cat_"+Date.now(), name, color:catColor}; CATEGORIES.push(nc); if(!activeCat) activeCat=nc.id; }
   catEditingId=null;
   renderNav(); renderGrid(); persist("Categoria salva com sucesso!"); renderAdminBody();
 }
@@ -787,7 +823,7 @@ function tabConteudoHTML(){
   html += `<div class="eyebrow mb-2 mt-4">RODAPÉ</div>`
     + fld("cFootTag","Frase do rodapé", c.footerTagline)
     + fld("cFootInfo","Linha de informações do rodapé", c.footerInfo);
-  html += `<button onclick="saveContent()" class="w-full mt-4 rounded-full py-3 font-bold" style="background:var(--avocado);color:var(--bg)">💾 Salvar conteúdo do site</button>`;
+  html += `<button onclick="saveContent()" class="w-full mt-4 rounded-full py-3 font-bold" style="background:var(--avocado);color:var(--bg)">Salvar conteúdo do site</button>`;
   return html;
 }
 function renderFeatEditList(){
@@ -796,40 +832,202 @@ function renderFeatEditList(){
   el.innerHTML = feats.map((f,i)=>`
     <div class="border rounded-lg p-2 mb-2 text-xs" style="border-color:var(--border)">
       <div class="flex gap-2 mb-1">
-        <input value="${esc(f.icon)}" onchange="updateFeature(${i},'icon',this.value)" class="w-12 rounded border px-2 py-1 text-center">
         <input value="${esc(f.title)}" onchange="updateFeature(${i},'title',this.value)" class="flex-1 rounded border px-2 py-1" placeholder="Título">
-        <button type="button" onclick="removeFeature(${i})" class="px-2 text-sm" style="color:var(--chili)">🗑️</button>
+        <button type="button" onclick="removeFeature(${i})" class="px-2 text-xs font-semibold underline" style="color:var(--chili)">Excluir</button>
       </div>
       <textarea rows="2" onchange="updateFeature(${i},'desc',this.value)" class="w-full rounded border px-2 py-1" placeholder="Descrição">${esc(f.desc)}</textarea>
     </div>`).join("") + `<button type="button" onclick="addFeature()" class="text-xs font-semibold" style="color:var(--marigold)">+ adicionar diferencial</button>`;
 }
-function updateFeature(i,key,val){ SITE.content.features[i][key]=val; }
-function addFeature(){ SITE.content.features.push({icon:"⭐",title:"",desc:""}); renderFeatEditList(); }
+function updateFeature(i,key,val){ SITE.content.features[i][key]=noEmoji(val); }
+function addFeature(){ SITE.content.features.push({title:"",desc:""}); renderFeatEditList(); }
 function removeFeature(i){ SITE.content.features.splice(i,1); renderFeatEditList(); }
 function saveContent(){
   const c = SITE.content;
-  c.brandName=document.getElementById("cName").value.trim()||c.brandName;
-  c.heroEyebrow=document.getElementById("cHeroEyebrow").value;
-  c.heroTitle=document.getElementById("cHeroTitle").value;
-  c.heroParagraph=document.getElementById("cHeroParagraph").value;
-  c.heroBulletsLine1=document.getElementById("cBul1").value;
-  c.heroBulletsLine2=document.getElementById("cBul2").value;
-  c.ctaWhatsappLabel=document.getElementById("cCtaWa").value;
-  c.ctaMenuLabel=document.getElementById("cCtaMenu").value;
-  c.marqueeText=document.getElementById("cMarquee").value;
-  c.menuEyebrow=document.getElementById("cMenuEyebrow").value;
-  c.menuTitle=document.getElementById("cMenuTitle").value;
-  c.featuresEyebrow=document.getElementById("cFeatEyebrow").value;
-  c.featuresTitle=document.getElementById("cFeatTitle").value;
-  c.ctaEyebrow=document.getElementById("cCtaEyebrow").value;
-  c.ctaTitle=document.getElementById("cCtaTitle").value;
-  c.ctaParagraph=document.getElementById("cCtaParagraph").value;
-  c.ctaButtonLabel=document.getElementById("cCtaBtn").value;
-  c.footerTagline=document.getElementById("cFootTag").value;
-  c.footerInfo=document.getElementById("cFootInfo").value;
+  c.brandName=fv("cName").trim()||c.brandName;
+  c.heroEyebrow=fv("cHeroEyebrow");
+  c.heroTitle=fv("cHeroTitle");
+  c.heroParagraph=fv("cHeroParagraph");
+  c.heroBulletsLine1=fv("cBul1");
+  c.heroBulletsLine2=fv("cBul2");
+  c.ctaWhatsappLabel=fv("cCtaWa");
+  c.ctaMenuLabel=fv("cCtaMenu");
+  c.marqueeText=fv("cMarquee");
+  c.menuEyebrow=fv("cMenuEyebrow");
+  c.menuTitle=fv("cMenuTitle");
+  c.featuresEyebrow=fv("cFeatEyebrow");
+  c.featuresTitle=fv("cFeatTitle");
+  c.ctaEyebrow=fv("cCtaEyebrow");
+  c.ctaTitle=fv("cCtaTitle");
+  c.ctaParagraph=fv("cCtaParagraph");
+  c.ctaButtonLabel=fv("cCtaBtn");
+  c.footerTagline=fv("cFootTag");
+  c.footerInfo=fv("cFootInfo");
   renderContent();
   persist("Conteúdo salvo com sucesso!");
 }
+
+/* ===== Carrossel de fotos (seção "Da chapa até a sua mesa") ===== */
+const CAR_MAX = 12, CAR_INTERVAL = 5500;
+const CAR = {idx:0, n:0, timer:null, raf:0, hover:false, resumeAt:0, userPaused:false, target:null, targetUntil:0,
+             reduced: !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches)};
+const CAR_ICON = {
+  prev:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>',
+  next:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>',
+  pause:'<svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><rect x="2" y="1" width="3" height="10" rx="1"/><rect x="7" y="1" width="3" height="10" rx="1"/></svg>',
+  play:'<svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M3 1.2v9.6a.6.6 0 0 0 .9.5l7.6-4.8a.6.6 0 0 0 0-1L3.9.7a.6.6 0 0 0-.9.5z"/></svg>'
+};
+function carItems(){ return (SITE.content.carousel||[]).filter(x=>x && x.url); }
+function carTrack(){ return document.getElementById("carTrack"); }
+
+function renderCarousel(){
+  const box = document.getElementById("carousel"); if(!box) return;
+  clearInterval(CAR.timer); CAR.timer = null;
+  const items = carItems();
+  CAR.n = items.length; CAR.idx = 0; CAR.hover = false; CAR.resumeAt = 0; CAR.target = null;
+  if(!items.length){ box.hidden = true; box.innerHTML = ""; return; }
+  const multi = items.length > 1;
+  box.hidden = false;
+  box.innerHTML = `
+    <div id="carTrack" class="car-track" tabindex="0" onkeydown="carKey(event)" aria-label="Fotos, use as setas para navegar">
+      ${items.map((it,i)=>`<div class="car-slide" role="group" aria-roledescription="slide" aria-label="${i+1} de ${items.length}">
+        <img src="${esc(it.url)}" alt="${esc(it.alt || ("Foto "+(i+1)+" de "+items.length))}" ${i===0?"":'loading="lazy"'} decoding="async" draggable="false" onerror="this.style.visibility='hidden'">
+      </div>`).join("")}
+    </div>
+    ${multi?`
+    <button type="button" class="car-btn car-prev" onclick="carStep(-1)" aria-label="Foto anterior">${CAR_ICON.prev}</button>
+    <button type="button" class="car-btn car-next" onclick="carStep(1)" aria-label="Próxima foto">${CAR_ICON.next}</button>
+    <div class="car-bar">
+      ${items.map((_,i)=>`<button type="button" class="car-dot" onclick="carStep(0,${i})" aria-label="Ir para a foto ${i+1}" ${i===0?'aria-current="true"':''}></button>`).join("")}
+      ${CAR.reduced?"":`<button type="button" id="carPause" class="car-pause" onclick="carTogglePause()" aria-label="Pausar a troca automática de fotos">${CAR_ICON.pause}</button>`}
+    </div>`:""}`;
+  if(!multi) return;
+  const t = carTrack();
+  t.addEventListener("scroll", ()=>{
+    cancelAnimationFrame(CAR.raf);
+    CAR.raf = requestAnimationFrame(()=>{
+      if(CAR.target !== null){   // durante a animação até a foto escolhida, não deixa os pontos "piscarem" de volta
+        const arrived = Math.abs(t.scrollLeft - CAR.target * t.clientWidth) < 2;
+        if(!arrived && Date.now() < CAR.targetUntil) return;
+        CAR.target = null;
+      }
+      const i = Math.round(t.scrollLeft / Math.max(1, t.clientWidth));
+      if(i !== CAR.idx){ CAR.idx = i; carSyncDots(); }
+    });
+  }, {passive:true});
+  const bump = ()=>{ CAR.resumeAt = Date.now() + 9000; CAR.target = null; };   // depois de qualquer toque/clique, espera antes de voltar a rodar
+  box.onmouseenter = ()=>{ CAR.hover = true; };
+  box.onmouseleave = ()=>{ CAR.hover = false; };
+  box.onfocusin = ()=>{ CAR.hover = true; };
+  box.onfocusout = ()=>{ CAR.hover = false; };
+  box.ontouchstart = bump; box.onpointerdown = bump;
+  carStart();
+}
+function carSyncDots(){
+  document.querySelectorAll("#carousel .car-dot").forEach((d,i)=>{ if(i===CAR.idx) d.setAttribute("aria-current","true"); else d.removeAttribute("aria-current"); });
+}
+function carGo(i){
+  const t = carTrack(); if(!t || CAR.n < 2) return;
+  i = (i + CAR.n) % CAR.n;
+  CAR.target = i; CAR.targetUntil = Date.now() + 900;
+  t.scrollTo({left: i * t.clientWidth, behavior: CAR.reduced ? "auto" : "smooth"});
+  CAR.idx = i; carSyncDots();
+}
+function carStep(delta, absolute){
+  CAR.resumeAt = Date.now() + 9000;
+  carGo(typeof absolute === "number" ? absolute : CAR.idx + delta);
+}
+function carKey(e){
+  if(e.key === "ArrowRight"){ e.preventDefault(); carStep(1); }
+  else if(e.key === "ArrowLeft"){ e.preventDefault(); carStep(-1); }
+}
+function carStart(){
+  clearInterval(CAR.timer); CAR.timer = null;
+  if(CAR.reduced || CAR.n < 2 || CAR.userPaused) return;   // respeita "reduzir movimento" e o botão de pausa
+  CAR.timer = setInterval(()=>{
+    if(document.hidden || CAR.hover || Date.now() < CAR.resumeAt) return;
+    carGo(CAR.idx + 1);
+  }, CAR_INTERVAL);
+}
+function carTogglePause(){
+  CAR.userPaused = !CAR.userPaused;
+  const b = document.getElementById("carPause");
+  if(b){
+    b.innerHTML = CAR.userPaused ? CAR_ICON.play : CAR_ICON.pause;
+    b.setAttribute("aria-label", CAR.userPaused ? "Retomar a troca automática de fotos" : "Pausar a troca automática de fotos");
+  }
+  carStart();
+}
+window.addEventListener("resize", ()=>{ const t = carTrack(); if(t) t.scrollLeft = CAR.idx * t.clientWidth; });
+
+/* --- Painel: aba Carrossel --- */
+let carBusy = false;
+function tabCarrosselHTML(){
+  return `
+    <div class="text-xs mb-3" style="color:var(--muted)">Fotos que passam em destaque na seção "${esc(noMarks(SITE.content.featuresTitle))}". Até ${CAR_MAX} fotos; prefira imagens na horizontal. Sem fotos, o carrossel não aparece no site.</div>
+    <label class="inline-block rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-semibold cursor-pointer">
+      Adicionar fotos
+      <input id="carFile" type="file" accept="image/*" multiple class="hidden" onchange="handleCarouselFiles(this)">
+    </label>
+    <div id="carStatus" class="text-xs mt-2 min-h-[1rem]" style="color:var(--muted)" role="status"></div>
+    <div id="carAdminList" class="mt-3 space-y-2"></div>
+    <button onclick="saveCarousel()" class="w-full mt-4 rounded-full py-3 font-bold" style="background:var(--avocado);color:var(--bg)">Salvar carrossel</button>`;
+}
+const noMarks = t => String(t||"").replace(/\*/g,"");
+function renderCarAdminList(){
+  const el = document.getElementById("carAdminList"); if(!el) return;
+  const list = SITE.content.carousel;
+  el.innerHTML = list.length ? list.map((it,i)=>`
+    <div class="flex items-center gap-2 border rounded-xl p-2" style="border-color:var(--border)">
+      <div class="flex flex-col text-xs leading-none shrink-0">
+        <button type="button" onclick="moveCarPhoto(${i},-1)" ${i===0?"disabled":""} class="disabled:opacity-20 py-0.5" aria-label="Mover foto ${i+1} para cima">▲</button>
+        <button type="button" onclick="moveCarPhoto(${i},1)" ${i===list.length-1?"disabled":""} class="disabled:opacity-20 py-0.5" aria-label="Mover foto ${i+1} para baixo">▼</button>
+      </div>
+      <img src="${esc(it.url)}" alt="" class="w-16 h-12 object-cover rounded-lg shrink-0">
+      <input value="${esc(it.alt||"")}" onchange="updateCarAlt(${i},this.value)" maxlength="200" placeholder="Descrição da foto (opcional)" aria-label="Descrição da foto ${i+1}" class="flex-1 min-w-0 rounded border px-2 py-1 text-xs">
+      <button type="button" onclick="removeCarPhoto(${i})" class="px-2 py-1 text-xs font-semibold underline shrink-0" style="color:var(--chili)">Remover</button>
+    </div>`).join("") : `<div class="text-xs" style="color:var(--muted)">Nenhuma foto ainda.</div>`;
+}
+function carSetStatus(msg, isError){
+  const el = document.getElementById("carStatus"); if(!el) return;
+  el.textContent = msg; el.style.color = isError ? "#ff8a70" : "var(--muted)";
+}
+async function handleCarouselFiles(input){
+  let files = Array.from(input.files || []); input.value = "";
+  if(!files.length || carBusy) return;
+  const list = SITE.content.carousel;
+  const room = CAR_MAX - list.length;
+  if(room <= 0){ carSetStatus("Limite de " + CAR_MAX + " fotos atingido. Remova alguma para adicionar outra.", true); return; }
+  const skipped = Math.max(0, files.length - room);
+  files = files.slice(0, room);
+  carBusy = true;
+  let ok = 0; const errors = [];
+  for(let k=0; k<files.length; k++){
+    carSetStatus("Enviando foto " + (k+1) + " de " + files.length + "...");
+    try{
+      const url = await uploadImageFile(files[k], 1600, 0.82);
+      list.push({url, alt:""}); ok++;
+      renderCarAdminList(); renderCarousel();
+    }catch(e){ errors.push(files[k].name + ": " + uploadErrorText(e)); if(!adminToken) break; }
+  }
+  carBusy = false;
+  let msg = ok ? (ok + (ok===1?" foto adicionada":" fotos adicionadas") + ". Clique em Salvar carrossel.") : "";
+  if(skipped) msg += " " + skipped + " ficou de fora (limite de " + CAR_MAX + ").";
+  if(errors.length) msg += " Falhou: " + errors.join(" | ");
+  carSetStatus(msg.trim(), errors.length > 0 && !ok);
+}
+function moveCarPhoto(i, dir){
+  const list = SITE.content.carousel, j = i + dir;
+  if(j < 0 || j >= list.length) return;
+  [list[i], list[j]] = [list[j], list[i]];
+  renderCarAdminList(); renderCarousel();
+}
+function removeCarPhoto(i){
+  if(!confirm("Remover esta foto do carrossel?")) return;
+  SITE.content.carousel.splice(i, 1);
+  renderCarAdminList(); renderCarousel();
+}
+function updateCarAlt(i, val){ SITE.content.carousel[i].alt = noEmoji(val).trim(); renderCarousel(); }
+function saveCarousel(){ persist("Carrossel salvo com sucesso!"); }
 
 /* --- Aba Configurações --- */
 function tabConfigHTML(){
@@ -839,13 +1037,13 @@ function tabConfigHTML(){
     <div class="mb-3"><label class="font-semibold block mb-1 text-sm">Número (DDI+DDD+número, só dígitos)</label><input id="cfgWa" value="${esc(c.whatsappNumber)}" placeholder="5567999999999" class="w-full rounded-lg border px-3 py-2 text-sm"></div>
     <div class="eyebrow mb-2 mt-4">AVISO / PROMOÇÃO</div>
     <div class="mb-3"><label class="font-semibold block mb-1 text-sm">Faixa de aviso no topo do site (vazio = oculto)</label><textarea id="cfgAnn" rows="2" class="w-full rounded-lg border px-3 py-2 text-sm" placeholder="Ex: Hoje o delivery é grátis acima de R$ 50!">${esc(c.announcement||"")}</textarea></div>
-    <button onclick="saveConfig()" class="w-full mt-2 rounded-full py-3 font-bold" style="background:var(--avocado);color:var(--bg)">💾 Salvar configurações</button>`;
+    <button onclick="saveConfig()" class="w-full mt-2 rounded-full py-3 font-bold" style="background:var(--avocado);color:var(--bg)">Salvar configurações</button>`;
 }
 function saveConfig(){
   const num = document.getElementById("cfgWa").value.replace(/\D/g,"");
   if(num.length<10 || num.length>14){ alert("Digite um número de WhatsApp válido (com DDI e DDD, só números)."); return; }
   SITE.content.whatsappNumber = num;
-  SITE.content.announcement = document.getElementById("cfgAnn").value.trim();
+  SITE.content.announcement = fv("cfgAnn").trim();
   syncWhatsappLinks(); renderAnnouncement();
   persist("Configurações salvas com sucesso!");
 }
