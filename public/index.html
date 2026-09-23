@@ -83,12 +83,6 @@
       <a href="#cardapio" id="heroMenuBtn" class="rounded-full px-5 py-3 font-semibold text-sm border" style="border-color:var(--border)"></a>
     </div>
   </div>
-  <div class="rounded-xl p-5 shadow-lg" style="background:var(--text);color:var(--bg)">
-    <div id="ticketBrand" class="mono text-[11px] tracking-widest" style="color:var(--chili)"></div>
-    <div class="fd font-bold text-xl mt-1">Comanda do dia</div>
-    <div class="mono text-[11px] mt-1" style="color:#7a6a55">CARDÁPIO ARTESANAL · Nº 01</div>
-    <div id="heroTicket" class="mt-4 space-y-2 text-sm"></div>
-  </div>
 </section>
 
 <section class="max-w-5xl mx-auto px-4 pt-6">
@@ -233,7 +227,6 @@ function renderContent(){
   document.getElementById("heroBul2").textContent = c.heroBulletsLine2;
   document.getElementById("heroWhatsappLabel").textContent = c.ctaWhatsappLabel;
   document.getElementById("heroMenuBtn").textContent = c.ctaMenuLabel;
-  document.getElementById("ticketBrand").textContent = c.brandName.toUpperCase();
   document.getElementById("menuEyebrow").textContent = c.menuEyebrow;
   document.getElementById("menuTitle").innerHTML = rich(c.menuTitle);
   document.getElementById("featuresEyebrow").textContent = c.featuresEyebrow;
@@ -248,7 +241,6 @@ function renderContent(){
   document.getElementById("footerTagline").textContent = c.footerTagline;
   document.getElementById("footerInfo").textContent = c.footerInfo;
   renderAnnouncement();
-  renderTicket();
   renderCarousel();
 }
 function renderAnnouncement(){
@@ -256,17 +248,7 @@ function renderAnnouncement(){
   const txt = (SITE.content.announcement||"").trim();
   if(txt){ el.textContent = txt; el.classList.remove("hidden"); } else { el.classList.add("hidden"); el.textContent=""; }
 }
-function renderTicket(){
-  const el = document.getElementById("heroTicket"); if(!el) return;
-  const picks=[], seen=new Set();
-  for(const c of CATEGORIES){
-    const item = MENU.find(p=>p.cat===c.id && p.available && !seen.has(p.id));
-    if(item){ picks.push(item); seen.add(item.id); }
-    if(picks.length>=4) break;
-  }
-  el.innerHTML = picks.length ? picks.map((p,i)=>`<div class="flex justify-between ${i<picks.length-1?'border-b border-dashed pb-1':''}" style="border-color:#00000022">${esc(p.name)} <span>${brl(p.price)}</span></div>`).join("")
-    : '<div class="text-sm">Cardápio em breve...</div>';
-}
+
 function syncWhatsappLinks(){
   const url = `https://wa.me/${SITE.content.whatsappNumber}`;
   const a1=document.getElementById("heroWhatsapp"), a2=document.getElementById("ctaWhatsapp");
